@@ -1,65 +1,153 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
+import { useMutation, useQuery } from "convex/react";
+import { api } from "../convex/_generated/api";
+import { Id } from "../convex/_generated/dataModel";
+import { ChatPanel } from "../components/ChatPanel";
+import { IdeaSidebar } from "../components/IdeaSidebar";
+import { StepIndicator } from "../components/StepIndicator";
+import { ApprovalControls } from "../components/ApprovalControls";
 
 export default function Home() {
+  const [query, setQuery] = useState("");
+  const [currentRunId, setCurrentRunId] = useState<Id<"runs"> | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const createRun = useMutation(api.runs.createRun);
+
+  const currentRun = useQuery(
+    api.runs.getRun,
+    currentRunId ? { runId: currentRunId } : "skip"
+  );
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!query.trim() || isProcessing) return;
+
+    setIsProcessing(true);
+
+    try {
+      // Create run
+      const runId = await createRun({
+        userQuery: query,
+        constraints: {
+          timeframe: "7d",
+          region: "Global",
+        },
+      });
+
+      setCurrentRunId(runId);
+
+      // Call the API route to start orchestration
+      const response = await fetch("/api/orchestrate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ runId }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        console.error("Orchestration failed:", error);
+      }
+    } catch (error) {
+      console.error("Failed to start run:", error);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleApproval = async () => {
+    if (!currentRunId) return;
+    setIsProcessing(true);
+
+    try {
+      // Call API route to resume after approval
+      const response = await fetch("/api/orchestrate/resume", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ runId: currentRunId }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        console.error("Resume failed:", error);
+      }
+    } catch (error) {
+      console.error("Failed to resume:", error);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const showApprovalControls =
+    currentRun?.status === "report_ready" ||
+    currentRun?.status === "awaiting_approval";
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="flex flex-col h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-6 shadow-lg">
+        <h1 className="text-3xl font-bold">🔥 Trend-to-Idea Agent</h1>
+        <p className="text-indigo-100 mt-1">
+          Discover trending topics and generate platform-specific content ideas
+        </p>
+      </header>
+
+      {/* Step Indicator */}
+      <StepIndicator runId={currentRunId} />
+
+      {/* Main Content */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Chat Panel */}
+        <div className="flex-1 flex flex-col">
+          <ChatPanel runId={currentRunId} />
+
+          {/* Approval Controls */}
+          {showApprovalControls && currentRunId && (
+            <div className="p-6 border-t border-gray-200 bg-white">
+              <ApprovalControls runId={currentRunId} onApprove={handleApproval} />
+            </div>
+          )}
+
+          {/* Input Form */}
+          <div className="p-6 border-t border-gray-200 bg-white">
+            <form onSubmit={handleSubmit} className="flex gap-3">
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="What trends are you interested in? (e.g., 'AI developments this week')"
+                className="flex-1 border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 bg-white placeholder-gray-500"
+                disabled={
+                  currentRun?.status === "planning" ||
+                  currentRun?.status === "researching" ||
+                  currentRun?.status === "ideating"
+                }
+              />
+              <button
+                type="submit"
+                disabled={
+                  !query.trim() ||
+                  currentRun?.status === "planning" ||
+                  currentRun?.status === "researching" ||
+                  currentRun?.status === "ideating"
+                }
+                className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-semibold px-8 py-3 rounded-lg transition-colors shadow-md"
+              >
+                {currentRun?.status === "planning" ||
+                  currentRun?.status === "researching" ||
+                  currentRun?.status === "ideating"
+                  ? "Processing..."
+                  : "Research"}
+              </button>
+            </form>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+
+        {/* Idea Sidebar */}
+        <IdeaSidebar runId={currentRunId} />
+      </div>
     </div>
   );
 }
