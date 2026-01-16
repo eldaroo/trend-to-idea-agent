@@ -4,11 +4,13 @@ import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { Id } from "../convex/_generated/dataModel";
-import { ChatPanel } from "../components/ChatPanel";
-import { IdeaSidebar } from "../components/IdeaSidebar";
-import { StepIndicator } from "../components/StepIndicator";
-import { ApprovalControls } from "../components/ApprovalControls";
+import { TopBar } from "../components/TopBar";
+import { Stepper } from "../components/Stepper";
+import { EventFeed } from "../components/EventFeed";
+import { HitlBar } from "../components/HitlBar";
+import { IdeasPanel } from "../components/IdeasPanel";
 
+// Force dark mode class on body/html effectively by wrapping content
 export default function Home() {
   const [query, setQuery] = useState("");
   const [currentRunId, setCurrentRunId] = useState<Id<"runs"> | null>(null);
@@ -21,6 +23,11 @@ export default function Home() {
     currentRunId ? { runId: currentRunId } : "skip"
   );
 
+  const handleNewRun = () => {
+    setCurrentRunId(null);
+    setQuery("");
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!query.trim() || isProcessing) return;
@@ -28,7 +35,6 @@ export default function Home() {
     setIsProcessing(true);
 
     try {
-      // Create run
       const runId = await createRun({
         userQuery: query,
         constraints: {
@@ -39,7 +45,6 @@ export default function Home() {
 
       setCurrentRunId(runId);
 
-      // Call the API route to start orchestration
       const response = await fetch("/api/orchestrate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -47,8 +52,7 @@ export default function Home() {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        console.error("Orchestration failed:", error);
+        console.error("Orchestration failed:", await response.json());
       }
     } catch (error) {
       console.error("Failed to start run:", error);
@@ -62,7 +66,6 @@ export default function Home() {
     setIsProcessing(true);
 
     try {
-      // Call API route to resume after approval
       const response = await fetch("/api/orchestrate/resume", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -70,8 +73,7 @@ export default function Home() {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        console.error("Resume failed:", error);
+        console.error("Resume failed:", await response.json());
       }
     } catch (error) {
       console.error("Failed to resume:", error);
@@ -80,73 +82,70 @@ export default function Home() {
     }
   };
 
-  const showApprovalControls =
+  const showHitlBar =
     currentRun?.status === "report_ready" ||
     currentRun?.status === "awaiting_approval";
 
-  return (
-    <div className="flex flex-col h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-6 shadow-lg">
-        <h1 className="text-3xl font-bold">🔥 Trend-to-Idea Agent</h1>
-        <p className="text-indigo-100 mt-1">
-          Discover trending topics and generate platform-specific content ideas
-        </p>
-      </header>
+  const isRunning =
+    currentRun?.status === "planning" ||
+    currentRun?.status === "researching" ||
+    currentRun?.status === "ideating";
 
-      {/* Step Indicator */}
-      <StepIndicator runId={currentRunId} />
+  return (
+    <div className="flex flex-col h-screen bg-[#0B0C10] text-[#E0E0E0] overflow-hidden font-sans">
+      {/* Top Bar */}
+      <TopBar runId={currentRunId} onNewRun={handleNewRun} />
+
+      {/* Stepper */}
+      <Stepper runId={currentRunId} />
 
       {/* Main Content */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Chat Panel */}
-        <div className="flex-1 flex flex-col">
-          <ChatPanel runId={currentRunId} />
+        {/* Left: Main stream */}
+        <div className="flex-1 flex flex-col min-w-0 bg-[#0B0C10] relative">
+          <EventFeed runId={currentRunId} />
 
-          {/* Approval Controls */}
-          {showApprovalControls && currentRunId && (
-            <div className="p-6 border-t border-gray-200 bg-white">
-              <ApprovalControls runId={currentRunId} onApprove={handleApproval} />
+          {/* HITL Bar */}
+          {showHitlBar && currentRunId && (
+            <div className="absolute bottom-24 left-0 right-0 z-30 px-6">
+              <HitlBar runId={currentRunId} onApprove={handleApproval} />
             </div>
           )}
 
           {/* Input Form */}
-          <div className="p-6 border-t border-gray-200 bg-white">
-            <form onSubmit={handleSubmit} className="flex gap-3">
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="What trends are you interested in? (e.g., 'AI developments this week')"
-                className="flex-1 border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 bg-white placeholder-gray-500"
-                disabled={
-                  currentRun?.status === "planning" ||
-                  currentRun?.status === "researching" ||
-                  currentRun?.status === "ideating"
-                }
-              />
+          <div className="p-6 border-t border-white/5 bg-[#0B0C10] relative z-20">
+            <form onSubmit={handleSubmit} className="flex gap-4 max-w-4xl mx-auto relative">
+              <div className="flex-1 relative">
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="ENTER RESEARCH QUERY..."
+                  className="w-full pl-6 pr-4 py-4 rounded-lg bg-[#15161A] border border-white/10 text-white placeholder-white/20 focus:border-accent focus:ring-1 focus:ring-accent outline-none transition-all font-mono text-sm tracking-wide shadow-inner input-glow"
+                  disabled={isRunning}
+                />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-2">
+                  <span className="text-[10px] text-white/20 font-mono border border-white/10 px-1.5 rounded">CMD+K</span>
+                </div>
+              </div>
+
               <button
                 type="submit"
-                disabled={
-                  !query.trim() ||
-                  currentRun?.status === "planning" ||
-                  currentRun?.status === "researching" ||
-                  currentRun?.status === "ideating"
-                }
-                className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-semibold px-8 py-3 rounded-lg transition-colors shadow-md"
+                disabled={!query.trim() || isRunning}
+                className="px-8 py-0 rounded-lg font-bold text-sm tracking-widest uppercase text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed btn-primary"
               >
-                {currentRun?.status === "planning" ||
-                  currentRun?.status === "researching" ||
-                  currentRun?.status === "ideating"
-                  ? "Processing..."
-                  : "Research"}
+                {isRunning ? (
+                  <span className="animate-pulse">PROCESSING</span>
+                ) : (
+                  "INITIATE"
+                )}
               </button>
             </form>
           </div>
         </div>
 
-        {/* Idea Sidebar */}
-        <IdeaSidebar runId={currentRunId} />
+        {/* Right: Ideas Panel */}
+        <IdeasPanel runId={currentRunId} />
       </div>
     </div>
   );
