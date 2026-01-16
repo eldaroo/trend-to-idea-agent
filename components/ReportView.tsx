@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
+
 interface Trend {
     title: string;
     description: string;
@@ -19,67 +21,95 @@ interface ReportViewProps {
     };
 }
 
-function getConfidenceStyle(confidence: number) {
-    if (confidence >= 0.8) return { label: 'HIGH CONFIDENCE', color: 'text-success-text', border: 'border-success/30', bg: 'bg-success/10' };
-    if (confidence >= 0.5) return { label: 'MED CONFIDENCE', color: 'text-yellow-400', border: 'border-yellow-400/30', bg: 'bg-yellow-400/10' };
-    return { label: 'LOW CONFIDENCE', color: 'text-white/40', border: 'border-white/10', bg: 'bg-white/5' };
+function getConfidenceBadge(confidence: number) {
+    if (confidence >= 0.8) return { label: 'High Confidence', bg: 'bg-[#30D158]/10', color: 'text-[#30D158]' };
+    if (confidence >= 0.5) return { label: 'Medium Confidence', bg: 'bg-[#FF9F0A]/10', color: 'text-[#FF9F0A]' };
+    return { label: 'Low Confidence', bg: 'bg-[#8E8E93]/10', color: 'text-[#8E8E93]' };
 }
 
 export function ReportView({ report }: ReportViewProps) {
+    const [highlightTitle, setHighlightTitle] = useState<string | null>(null);
+    const trendRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+
+    useEffect(() => {
+        const handleHighlight = (e: CustomEvent<string>) => {
+            const title = e.detail;
+            setHighlightTitle(title);
+
+            // Scroll to element
+            const element = trendRefs.current[title];
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+
+            // Remove highlight after 2s
+            setTimeout(() => setHighlightTitle(null), 3000);
+        };
+
+        window.addEventListener('highlight-trend' as any, handleHighlight);
+        return () => window.removeEventListener('highlight-trend' as any, handleHighlight);
+    }, []);
+
     return (
-        <div className="animate-fade-in px-4 pb-8">
+        <div className="px-4 pb-8 animate-ios-entry">
             {/* Header */}
-            <div className="flex items-center justify-between mb-6 pt-4 border-t border-white/5">
-                <div className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-accent" />
-                    <h2 className="font-mono text-sm tracking-widest text-white/90 uppercase">
-                        Synthesis Report
-                    </h2>
-                </div>
-                <span className="font-mono text-[10px] text-white/30">
-                    ts: {new Date(report.generatedAt).getTime()}
+            <div className="flex items-center justify-between mb-6 px-2">
+                <h2 className="text-[20px] font-bold tracking-tight text-white">
+                    Research Synthesis
+                </h2>
+                <span className="text-[13px] text-[#8E8E93] bg-[#1C1C1E] px-3 py-1 rounded-full">
+                    {new Date(report.generatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
             </div>
 
             {/* Grid */}
-            <div className="grid grid-cols-1 gap-4">
+            <div className="flex flex-col gap-4">
                 {report.trends.map((trend, idx) => {
-                    const conf = getConfidenceStyle(trend.confidence);
+                    const conf = getConfidenceBadge(trend.confidence);
+                    const isHighlighted = highlightTitle === trend.title;
 
                     return (
                         <div key={idx}
-                            className="bg-[#15161A] border border-white/5 rounded-lg p-5 hover:border-white/10 transition-colors group relative overflow-hidden"
+                            ref={(el) => { trendRefs.current[trend.title] = el; }}
+                            className={`
+                                rounded-[24px] p-6 border transition-all duration-500
+                                ${isHighlighted
+                                    ? 'bg-[#0A84FF]/20 border-[#0A84FF] shadow-[0_0_30px_rgba(10,132,255,0.3)] scale-[1.02]'
+                                    : 'bg-[#1C1C1E] border-white/5 hover:bg-[#2C2C2E]'
+                                }
+                            `}
                         >
-                            <div className="absolute top-0 left-0 w-1 h-full bg-white/5 group-hover:bg-accent/50 transition-colors" />
-
                             {/* Header */}
-                            <div className="flex items-start justify-between gap-4 mb-3 pl-2">
-                                <h3 className="font-sans font-semibold text-white text-base">
-                                    {idx + 1}. {trend.title}
+                            <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+                                <h3 className="text-[17px] font-semibold text-white leading-tight">
+                                    {trend.title}
                                 </h3>
-                                <span className={`font-mono text-[10px] px-2 py-0.5 rounded border ${conf.border} ${conf.bg} ${conf.color}`}>
+                                <span className={`text-[12px] font-medium px-3 py-1 rounded-full ${conf.bg} ${conf.color}`}>
                                     {conf.label}
                                 </span>
                             </div>
 
                             {/* Body */}
-                            <p className="pl-2 text-sm text-white/60 mb-4 leading-relaxed max-w-3xl font-light">
+                            <p className="text-[15px] text-[#D1D1D6] leading-relaxed mb-5 font-normal">
                                 {trend.description}
                             </p>
 
-                            {/* Footage/Sources */}
-                            <div className="pl-2 flex flex-wrap gap-2">
-                                {trend.sources.map((source, sidx) => (
-                                    <a
-                                        key={sidx}
-                                        href={source.url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="font-mono text-[10px] text-white/40 bg-white/5 px-2 py-1 rounded border border-white/5 hover:border-accent/30 hover:text-accent transition-all"
-                                    >
-                                        [{sidx + 1}] {new URL(source.url).hostname.replace('www.', '')}
-                                    </a>
-                                ))}
+                            {/* Data/Sources */}
+                            <div>
+                                <h4 className="text-[12px] font-semibold text-[#8E8E93] uppercase mb-2 tracking-wide">Sources</h4>
+                                <div className="flex flex-wrap gap-2">
+                                    {trend.sources.map((source, sidx) => (
+                                        <a
+                                            key={sidx}
+                                            href={source.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-[12px] text-[#0A84FF] bg-[#0A84FF]/10 px-3 py-1.5 rounded-lg font-medium hover:bg-[#0A84FF]/20 transition-colors truncate max-w-[200px]"
+                                        >
+                                            {new URL(source.url).hostname.replace('www.', '')}
+                                        </a>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     );

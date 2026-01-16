@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "convex/react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../convex/_generated/api";
 import { Id } from "../convex/_generated/dataModel";
 import { EventCard } from "./EventCard";
@@ -15,6 +16,26 @@ export function EventFeed({ runId }: EventFeedProps) {
         api.events.getEventsBySurface,
         runId ? { runId, surface: "main" } : "skip"
     );
+
+    const scrollRef = useRef<HTMLDivElement>(null);
+    const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
+
+    // Monitor scroll position to determine if we should stay locked to bottom
+    const handleScroll = () => {
+        if (!scrollRef.current) return;
+        const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
+
+        // If user is within 50px of the bottom, enable auto-scroll. Otherwise disable.
+        const isAtBottom = scrollHeight - scrollTop - clientHeight < 50;
+        setShouldAutoScroll(isAtBottom);
+    };
+
+    // Auto-scroll effect
+    useEffect(() => {
+        if (shouldAutoScroll && scrollRef.current) {
+            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        }
+    }, [events, shouldAutoScroll]); // Re-run when events change
 
     if (!runId) {
         return (
@@ -40,7 +61,11 @@ export function EventFeed({ runId }: EventFeedProps) {
     const nonReportEvents = events?.filter((e: any) => e.type !== "report") || [];
 
     return (
-        <div className="flex-1 overflow-y-auto p-6">
+        <div
+            ref={scrollRef}
+            onScroll={handleScroll}
+            className="flex-1 overflow-y-auto p-6 scroll-smooth"
+        >
             {/* Event stream */}
             <div className="space-y-1">
                 {nonReportEvents.map((event: any, idx: number) => (

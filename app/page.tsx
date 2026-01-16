@@ -10,7 +10,6 @@ import { EventFeed } from "../components/EventFeed";
 import { HitlBar } from "../components/HitlBar";
 import { IdeasPanel } from "../components/IdeasPanel";
 
-// Force dark mode class on body/html effectively by wrapping content
 export default function Home() {
   const [query, setQuery] = useState("");
   const [currentRunId, setCurrentRunId] = useState<Id<"runs"> | null>(null);
@@ -92,55 +91,54 @@ export default function Home() {
     currentRun?.status === "ideating";
 
   return (
-    <div className="flex flex-col h-screen bg-[#0B0C10] text-[#E0E0E0] overflow-hidden font-sans">
+    <div className="flex flex-col h-screen bg-black text-white overflow-hidden font-sans relative selection:bg-[#0A84FF]/30">
+      {/* Background Gradients for Glass Effect */}
+      <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-[#0A84FF] rounded-full mix-blend-screen filter blur-[100px] opacity-10 pointer-events-none -translate-x-1/2 -translate-y-1/2" />
+      <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-[#30D158] rounded-full mix-blend-screen filter blur-[120px] opacity-5 pointer-events-none translate-x-1/2 translate-y-1/2" />
+
       {/* Top Bar */}
       <TopBar runId={currentRunId} onNewRun={handleNewRun} />
 
-      {/* Stepper */}
-      <Stepper runId={currentRunId} />
+      {/* Content Area */}
+      <div className="flex flex-1 overflow-hidden relative z-10">
+        {/* Left: Main Area */}
+        <div className="flex-1 flex flex-col min-w-0">
+          <Stepper runId={currentRunId} />
 
-      {/* Main Content */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Left: Main stream */}
-        <div className="flex-1 flex flex-col min-w-0 bg-[#0B0C10] relative">
-          <EventFeed runId={currentRunId} />
+          <div className="flex-1 relative overflow-hidden flex flex-col">
+            <EventFeed runId={currentRunId} />
 
-          {/* HITL Bar */}
-          {showHitlBar && currentRunId && (
-            <div className="absolute bottom-24 left-0 right-0 z-30 px-6">
-              <HitlBar runId={currentRunId} onApprove={handleApproval} />
-            </div>
-          )}
+            {/* HITL Overlay */}
+            {showHitlBar && currentRunId && (
+              <div className="absolute bottom-32 left-0 right-0 px-6 z-50 flex justify-center">
+                <HitlBar runId={currentRunId} onApprove={handleApproval} />
+              </div>
+            )}
 
-          {/* Input Form */}
-          <div className="p-6 border-t border-white/5 bg-[#0B0C10] relative z-20">
-            <form onSubmit={handleSubmit} className="flex gap-4 max-w-4xl mx-auto relative">
-              <div className="flex-1 relative">
+            {/* Input Area */}
+            <div className="p-6 pb-8 bg-gradient-to-t from-black to-transparent">
+              <form onSubmit={handleSubmit} className="flex gap-3 max-w-3xl mx-auto relative group">
                 <input
                   type="text"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="ENTER RESEARCH QUERY..."
-                  className="w-full pl-6 pr-4 py-4 rounded-lg bg-[#15161A] border border-white/10 text-white placeholder-white/20 focus:border-accent focus:ring-1 focus:ring-accent outline-none transition-all font-mono text-sm tracking-wide shadow-inner input-glow"
+                  placeholder="Search for trends..."
+                  className="w-full h-14 pl-6 pr-32 rounded-[24px] bg-[#1C1C1E] border border-white/5 text-[16px] text-white placeholder-[#8E8E93] focus:outline-none focus:ring-2 focus:ring-[#0A84FF] transition-all shadow-lg"
                   disabled={isRunning}
                 />
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-2">
-                  <span className="text-[10px] text-white/20 font-mono border border-white/10 px-1.5 rounded">CMD+K</span>
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={!query.trim() || isRunning}
-                className="px-8 py-0 rounded-lg font-bold text-sm tracking-widest uppercase text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed btn-primary"
-              >
-                {isRunning ? (
-                  <span className="animate-pulse">PROCESSING</span>
-                ) : (
-                  "INITIATE"
-                )}
-              </button>
-            </form>
+                <button
+                  type="submit"
+                  disabled={!query.trim() || isRunning}
+                  className="absolute right-2 top-2 h-10 px-6 rounded-[20px] bg-[#0A84FF] hover:bg-[#0071E3] text-white font-semibold text-[14px] transition-all disabled:opacity-50 disabled:bg-[#2C2C2E] flex items-center justify-center"
+                >
+                  {isRunning ? (
+                    <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    "Initiate"
+                  )}
+                </button>
+              </form>
+            </div>
           </div>
         </div>
 

@@ -1,165 +1,110 @@
 @import "tailwindcss";
 
 :root {
-  /* Bases - Dark Luxury / Industrial */
-  --bg-base: #0B0C10;
-  /* Rich Black */
-  --bg-surface: #15161A;
-  /* Slightly lighter structure */
-  --bg-elevated: #1F2229;
-  /* Cards/Inputs */
-  --bg-glass: rgba(21, 22, 26, 0.7);
-  /* For glassmorphism */
+  /* iOS System Colors (Dark Mode) */
+  --ios-bg: #000000;
+  --ios-surface: #1C1C1E;
+  --ios-surface-variant: #2C2C2E;
 
-  /* Borders - Steel/Precision */
-  --border-subtle: rgba(197, 198, 199, 0.08);
-  --border-default: rgba(197, 198, 199, 0.15);
-  --border-highlight: rgba(102, 252, 241, 0.3);
-  /* Subtle cyan glow feel */
+  /* Text */
+  --text-primary: #FFFFFF;
+  --text-secondary: #8E8E93;
+  /* System Gray */
+  --text-tertiary: #48484A;
 
-  /* Brand - Deep Cobalt & precision accents */
-  --brand-primary: #002B5B;
-  /* Cobalt */
-  --brand-glow: #004e9a;
-  /* Lighter cobalt for glows */
-  --accent: #66FCF1;
-  /* Terminal Cyan for distinct highlights */
-  --accent-dim: #45A29E;
-  /* Muted teal */
+  /* Accents */
+  --ios-blue: #0A84FF;
+  /* iOS Dark Mode Blue */
+  --ios-green: #30D158;
+  --ios-red: #FF453A;
+  --ios-orange: #FF9F0A;
+  --ios-cyan: #64D2FF;
 
-  /* Text - Silver/Cream for contrast */
-  --text-primary: #E0E0E0;
-  /* Cream/Silver */
-  --text-secondary: #9FA1A6;
-  /* Steel Gray */
-  --text-muted: #6B6D74;
-  /* Darker Steel */
-  --text-mono: #66FCF1;
-  /* Data points */
+  /* Glass Material */
+  --glass-bg: rgba(30, 30, 30, 0.65);
+  --glass-border: rgba(255, 255, 255, 0.1);
 
-  /* Semantic */
-  --success: #064635;
-  /* Deep Emerald */
-  --success-text: #50CB93;
-  --error: #4B0000;
-  /* Deep Crimson */
-  --error-text: #FF6B6B;
-
-  /* Spacing & Radius - Industrial requires sharper edges */
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
+  /* Structure */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
 
   /* Typography */
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono: 'Roboto Mono', 'Geist Mono', monospace;
-}
-
-* {
-  box-sizing: border-box;
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-display: ".SF Pro Display", -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 body {
-  background: var(--bg-base);
+  background: var(--ios-bg);
   color: var(--text-primary);
   font-family: var(--font-sans);
-  font-size: 14px;
+  font-size: 15px;
+  /* iOS standard body */
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.01em;
 }
 
-/* Scrollbar - Minimal */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* Utilities */
+.ios-glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--glass-border);
 }
 
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--bg-elevated);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
-}
-
-/* Typography Overrides */
-h1,
-h2,
-h3 {
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  /* Tighter for "Premium" feel */
-}
-
-.mono {
-  font-family: var(--font-mono);
-}
-
-/* Glassmorphism Classes */
-.glass {
-  background: var(--bg-glass);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--border-subtle);
-}
-
-.glass-panel {
-  background: linear-gradient(145deg, rgba(31, 34, 41, 0.6) 0%, rgba(21, 22, 26, 0.8) 100%);
-  backdrop-filter: blur(10px);
-  border: 1px solid var(--border-subtle);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-}
-
-/* Industrial Card */
-.industrial-card {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
+.ios-card {
+  background: var(--ios-surface);
   border-radius: var(--radius-lg);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.15);
-  transition: all 0.2s ease;
+  /* Subtle border/inner shadow for depth */
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
-.industrial-card:hover {
-  border-color: var(--border-default);
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+.ios-btn {
+  border-radius: var(--radius-full);
+  font-weight: 600;
+  transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
 }
 
-/* Input Glow */
-.input-glow:focus {
-  border-color: var(--accent-dim);
-  box-shadow: 0 0 15px -2px rgba(102, 252, 241, 0.15);
+.ios-btn:active {
+  transform: scale(0.96);
+  opacity: 0.8;
 }
 
-/* Button Glow */
-.btn-primary {
-  background: linear-gradient(180deg, var(--brand-primary) 0%, #001f42 100%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 0 10px rgba(0, 43, 91, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+.ios-input {
+  background: var(--ios-surface-variant);
+  border-radius: var(--radius-md);
+  border: none;
+  color: white;
 }
 
-.btn-primary:hover {
-  background: linear-gradient(180deg, var(--brand-glow) 0%, var(--brand-primary) 100%);
-  box-shadow: 0 0 15px rgba(0, 78, 154, 0.6);
+.ios-input:focus {
+  background: #3A3A3C;
+  outline: none;
+  box-shadow: 0 0 0 2px var(--ios-blue);
 }
 
 /* Animations */
-@keyframes terminal-blink {
-
-  0%,
-  100% {
-    opacity: 1;
+@keyframes slide-up-fade {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
   }
 
-  50% {
-    opacity: 0;
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
-.cursor-blink {
-  animation: terminal-blink 1s step-end infinite;
+.animate-ios-entry {
+  animation: slide-up-fade 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+/* Scrollbar - Hidden/Overlay style */
+::-webkit-scrollbar {
+  width: 0px;
+  background: transparent;
 }
