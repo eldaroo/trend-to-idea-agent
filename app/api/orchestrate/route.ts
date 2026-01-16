@@ -46,6 +46,24 @@ export async function POST(request: Request) {
             await convex.mutation(api.searchCache.cacheSearch, { query, results });
         };
 
+        // Check if this is a refine operation (re-running after user refined constraints)
+        const isRefine = run.approval === "refine";
+        let currentRun = run;
+
+        if (isRefine) {
+            console.log("[Orchestrator] Refine detected - clearing previous events");
+            await convex.mutation(api.events.clearEvents, { runId: runId as Id<"runs"> });
+            // Reset approval state
+            await convex.mutation(api.runs.setApproval, { runId: runId as Id<"runs">, approval: null });
+
+            // Re-fetch the run to get updated constraints from the refine form
+            const updatedRun = await convex.query(api.runs.getRun, { runId: runId as Id<"runs"> });
+            if (updatedRun) {
+                currentRun = updatedRun;
+                console.log("[Orchestrator] Using refined constraints:", currentRun.constraints);
+            }
+        }
+
         // ========== STEP 1: Clarify Scope ==========
         console.log("[Orchestrator] Clarifying scope...");
         await updateStatus("planning");
@@ -83,8 +101,12 @@ IMPORTANT: Extract EXACTLY what the user specified. Pay close attention to:
    - "give me 5" → 5
    - If not mentioned, default to 5
 
-4. MAIN TOPIC - Extract the core research topic
+4. MAIN TOPIC - Extract the core research topic (what to search for)
+   - REMOVE platform names (LinkedIn, Twitter, etc.) from the topic
+   - REMOVE instructions like "create a post about", "write 3 tweets"
+   - REMOVE quantities like "3 ideas", "5 posts"
    - Include the year if specified (e.g., "technology trends 2025")
+   - Example: "AI trends for LinkedIn" -> Topic: "AI trends"
 
 Return ONLY valid JSON (no markdown, no explanation):
 {
@@ -97,29 +119,46 @@ Return ONLY valid JSON (no markdown, no explanation):
 }`;
 
         let scope;
-        try {
-            await emit("main", "log", { msg: "🔍 Analyzing your request..." });
-            const scopeResult = await model.generateContent(scopePrompt);
-            const scopeText = scopeResult.response.text();
-            console.log("[Orchestrator] Scope response:", scopeText);
 
-            const jsonMatch = scopeText.match(/\{[\s\S]*\}/);
-            scope = jsonMatch ? JSON.parse(jsonMatch[0]) : {
-                platforms: ["LinkedIn", "Twitter/X"],
-                timeframe: "7d",
-                region: "Global",
-                topic: run.userQuery,
-                ideaCount: 5
-            };
-        } catch (e) {
-            console.error("[Orchestrator] Scope extraction failed:", e);
+        // In refine mode, use the updated constraints directly instead of re-extracting
+        if (isRefine) {
+            console.log("[Orchestrator] Refine mode - using form constraints directly");
             scope = {
-                platforms: ["LinkedIn", "Twitter/X"],
-                timeframe: "7d",
-                region: "Global",
-                topic: run.userQuery,
-                ideaCount: 5
+                platforms: currentRun.constraints.platforms || ["LinkedIn", "Twitter/X"],
+                timeframe: currentRun.constraints.timeframe || "7d",
+                region: currentRun.constraints.region || "Global",
+                topic: currentRun.userQuery,
+                ideaCount: currentRun.constraints.ideaCount || 5,
+                include: currentRun.constraints.include,
+                exclude: currentRun.constraints.exclude,
             };
+            await emit("main", "log", { msg: `🔄 Refining with: Platforms=${scope.platforms.join(", ")}, Ideas=${scope.ideaCount}, Timeframe=${scope.timeframe}, Region=${scope.region}` });
+        } else {
+            // Normal mode - extract scope from user query via AI
+            try {
+                await emit("main", "log", { msg: "🔍 Analyzing your request..." });
+                const scopeResult = await model.generateContent(scopePrompt);
+                const scopeText = scopeResult.response.text();
+                console.log("[Orchestrator] Scope response:", scopeText);
+
+                const jsonMatch = scopeText.match(/\{[\s\S]*\}/);
+                scope = jsonMatch ? JSON.parse(jsonMatch[0]) : {
+                    platforms: ["LinkedIn", "Twitter/X"],
+                    timeframe: "7d",
+                    region: "Global",
+                    topic: currentRun.userQuery,
+                    ideaCount: 5
+                };
+            } catch (e) {
+                console.error("[Orchestrator] Scope extraction failed:", e);
+                scope = {
+                    platforms: ["LinkedIn", "Twitter/X"],
+                    timeframe: "7d",
+                    region: "Global",
+                    topic: currentRun.userQuery,
+                    ideaCount: 5
+                };
+            }
         }
 
         await emit("main", "log", {
@@ -246,8 +285,8 @@ Return JSON format:
             await emit("main", "log", { msg: `Searching: "${query}"` });
 
             try {
-                // Check cache first
-                const cachedResults = await getCachedSearch(query);
+                // Check cache first (skip if refining to force fresh results with new constraints)
+                const cachedResults = !isRefine ? await getCachedSearch(query) : null;
 
                 let results;
                 if (cachedResults && cachedResults.length > 0) {
@@ -256,7 +295,7 @@ Return JSON format:
                 } else {
                     // Cache miss - make API call
                     await emit("main", "log", { msg: `⚡ Fetching fresh results for: "${query}"` });
-                    results = await searchClient.searchTrends(query, run.constraints);
+                    results = await searchClient.searchTrends(query, currentRun.constraints);
 
                     // Cache the results
                     await cacheSearch(query, results);
@@ -288,6 +327,20 @@ Return JSON format:
 
         await emit("main", "log", { msg: `Found ${candidates.length} trend candidates` });
 
+        if (candidates.length === 0) {
+            await emit("main", "log", { msg: "❌ No relevant trends found. Try refining your search parameters." });
+            await emit("main", "status", { step: "⚠️ No results found. Please refine search." });
+
+            // Set approval to refine to indicate intervention needed
+            await convex.mutation(api.runs.setApproval, {
+                runId: runId as Id<"runs">,
+                approval: "refine",
+                refinement: "No search results found"
+            });
+
+            return NextResponse.json({ success: false, reason: "no_candidates" });
+        }
+
         // ========== STEP 3: Synthesizing Report ==========
         console.log("[Orchestrator] Synthesizing report...");
         await emit("main", "status", { step: "📊 Synthesizing research report..." });
@@ -312,7 +365,7 @@ Create a JSON report with:
       "confidence": 0.0-1.0,
       "sources": [
         {
-          "url": "source url",
+          "url": "EXACT full URL from the research findings above (e.g., https://example.com/article-title-123)",
           "title": "source title",
           "snippet": "relevant excerpt"
         }
@@ -320,6 +373,12 @@ Create a JSON report with:
     }
   ]
 }
+
+CRITICAL RULES FOR SOURCES:
+- ALWAYS use the EXACT full URL from the "URL:" field in the research findings above
+- NEVER simplify URLs to just domain names (e.g., DON'T use "theinformation.com", USE "https://www.theinformation.com/articles/ai-video-generation-2026")
+- NEVER invent or modify URLs
+- Each trend should cite 1-3 specific sources with their COMPLETE URLs
 
 Deduplicate similar trends. Rank by relevance. Include 3-5 trends.`;
 

@@ -1,0 +1,27 @@
+services:
+  # Next.js Development with Hot Reload
+  app:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_CONVEX_URL=http://localhost:3210
+      - CONVEX_DEPLOYMENT=${CONVEX_DEPLOYMENT}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.0-flash-exp}
+      - GEMINI_TEMPERATURE=${GEMINI_TEMPERATURE:-0.2}
+      - GOOGLE_SEARCH_API_KEY=${GOOGLE_SEARCH_API_KEY}
+      - GOOGLE_SEARCH_ENGINE_ID=${GOOGLE_SEARCH_ENGINE_ID}
+    command: sh -c "npm install && npm run dev"
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

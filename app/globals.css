@@ -103,6 +103,34 @@ body {
   animation: slide-up-fade 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
+/* Mobile Drawer Slide In */
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.35s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+}
+
+/* Touch-friendly tap targets (min 44px as per Apple HIG) */
+.touch-target {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/* Safe area insets for notched devices */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 20px);
+}
+
 /* Scrollbar - Hidden/Overlay style */
 ::-webkit-scrollbar {
   width: 0px;

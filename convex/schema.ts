@@ -33,6 +33,8 @@ export default defineSchema({
             region: v.optional(v.string()),
             include: v.optional(v.array(v.string())),
             exclude: v.optional(v.array(v.string())),
+            platforms: v.optional(v.array(v.string())),
+            ideaCount: v.optional(v.number()),
         }),
 
         // Research output

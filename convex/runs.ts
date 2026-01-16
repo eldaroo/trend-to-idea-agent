@@ -81,7 +81,8 @@ export const setApproval = mutation({
         approval: v.union(
             v.literal("approved"),
             v.literal("refine"),
-            v.literal("restart")
+            v.literal("restart"),
+            v.null()
         ),
         refinement: v.optional(v.string()),
     },
@@ -108,6 +109,8 @@ export const updateConstraints = mutation({
             region: v.optional(v.string()),
             include: v.optional(v.array(v.string())),
             exclude: v.optional(v.array(v.string())),
+            platforms: v.optional(v.array(v.string())),
+            ideaCount: v.optional(v.number()),
         }),
     },
     handler: async (ctx, args) => {

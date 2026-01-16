@@ -21,6 +21,9 @@ export interface SearchResponse {
 }
 
 export class SearchClient {
+  // ⚡ TESTING MODE: Set to true to always use mock data
+  private FORCE_MOCK = false;
+
   /**
    * Search using Google Custom Search API (100 free queries/day)
    * Falls back to mock data if no API key is configured
@@ -29,9 +32,16 @@ export class SearchClient {
     query: string,
     options: {
       maxResults?: number;
+      dateRestrict?: string; // e.g., "d7" for 7 days, "d20" for 20 days, "m1" for 1 month
     } = {}
   ): Promise<SearchResponse> {
-    const { maxResults = 10 } = options;
+    const { maxResults = 10, dateRestrict } = options;
+
+    // Force mock mode for testing
+    if (this.FORCE_MOCK) {
+      console.log("🧪 [MOCK MODE] Using mock data for:", query);
+      return this.getMockResults(query, maxResults);
+    }
 
     // Check if Google Custom Search is configured
     const apiKey = process.env.GOOGLE_SEARCH_API_KEY;
@@ -44,7 +54,13 @@ export class SearchClient {
     }
 
     try {
-      const url = `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${searchEngineId}&q=${encodeURIComponent(query)}&num=${Math.min(maxResults, 10)}`;
+      let url = `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${searchEngineId}&q=${encodeURIComponent(query)}&num=${Math.min(maxResults, 10)}`;
+
+      // Add date restriction if specified
+      if (dateRestrict) {
+        url += `&dateRestrict=${dateRestrict}`;
+        console.log(`📅 [DATE FILTER] Restricting to: ${dateRestrict}`);
+      }
 
       const response = await fetch(url);
 
@@ -151,8 +167,23 @@ export class SearchClient {
       enhancedQuery += ` ${excludeTerms}`;
     }
 
+    // Convert timeframe to Google's dateRestrict format
+    let dateRestrict: string | undefined;
+    if (constraints.timeframe) {
+      const dateMap: Record<string, string> = {
+        "24h": "d1",
+        "7d": "d7",
+        "20d": "d20",
+        "30d": "m1",
+        "year:2026": "d365", // Approximate - Google doesn't support year filter directly
+        "year:2025": "d730",
+      };
+      dateRestrict = dateMap[constraints.timeframe] || "d30";
+    }
+
     const response = await this.search(enhancedQuery, {
       maxResults: 15,
+      dateRestrict,
     });
 
     return response.results;

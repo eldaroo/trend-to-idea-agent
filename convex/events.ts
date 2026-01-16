@@ -71,3 +71,23 @@ export const getEventsBySurface = query({
             .collect();
     },
 });
+
+// Clear all events for a run (used when refining research)
+export const clearEvents = mutation({
+    args: {
+        runId: v.id("runs"),
+    },
+    handler: async (ctx, args) => {
+        const events = await ctx.db
+            .query("events")
+            .withIndex("by_run_and_time", (q) => q.eq("runId", args.runId))
+            .collect();
+
+        for (const event of events) {
+            await ctx.db.delete(event._id);
+        }
+
+        console.log(`[ClearEvents] Deleted ${events.length} events for run ${args.runId}`);
+        return { deleted: events.length };
+    },
+});

@@ -9,9 +9,11 @@ import { IdeaCard } from "./IdeaCard";
 interface IdeasPanelProps {
     runId: Id<"runs"> | null;
     targetCount?: number;
+    isMobile?: boolean;
+    onClose?: () => void;
 }
 
-export function IdeasPanel({ runId, targetCount = 5 }: IdeasPanelProps) {
+export function IdeasPanel({ runId, targetCount = 5, isMobile = false, onClose }: IdeasPanelProps) {
     const events = useQuery(
         api.events.getEventsBySurface,
         runId ? { runId, surface: "sidebar" } : "skip"
@@ -43,21 +45,34 @@ export function IdeasPanel({ runId, targetCount = 5 }: IdeasPanelProps) {
     }, [ideas, shouldAutoScroll]);
 
     return (
-        <div className="w-[380px] flex flex-col h-full border-l border-white/10 relative overflow-hidden">
+        <div className={`${isMobile ? 'w-full' : 'w-[380px]'} flex flex-col h-full border-l border-white/10 relative overflow-hidden bg-black`}>
             {/* Glass Background Layer */}
             <div className="absolute inset-0 ios-glass z-0" />
 
             {/* Header */}
-            <div className="p-6 pb-4 relative z-10 border-b border-white/5">
+            <div className="p-5 sm:p-6 pb-4 relative z-10 border-b border-white/5">
                 <div className="flex items-center justify-between">
                     <h2 className="text-[17px] font-semibold text-white tracking-tight">
                         Intelligence Feed
                     </h2>
-                    {showSidebar && ideas.length > 0 && (
-                        <div className="px-3 py-1 rounded-full bg-[#30D158] text-white text-[12px] font-bold shadow-sm">
-                            {ideas.length}
-                        </div>
-                    )}
+                    <div className="flex items-center gap-2">
+                        {showSidebar && ideas.length > 0 && (
+                            <div className="px-3 py-1 rounded-full bg-[#30D158] text-white text-[12px] font-bold shadow-sm">
+                                {ideas.length}
+                            </div>
+                        )}
+                        {/* Close button for mobile */}
+                        {isMobile && onClose && (
+                            <button
+                                onClick={onClose}
+                                className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white/60 hover:bg-white/20 transition-colors"
+                            >
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        )}
+                    </div>
                 </div>
                 <p className="text-[13px] text-[#8E8E93] mt-1">
                     Live creative synthesis
@@ -68,7 +83,7 @@ export function IdeasPanel({ runId, targetCount = 5 }: IdeasPanelProps) {
             <div
                 ref={scrollRef}
                 onScroll={handleScroll}
-                className="flex-1 overflow-y-auto p-4 relative z-10 space-y-3"
+                className="flex-1 overflow-y-auto p-3 sm:p-4 relative z-10 space-y-3"
             >
                 {!showSidebar ? (
                     // Empty State - iOS Style
@@ -99,8 +114,9 @@ export function IdeasPanel({ runId, targetCount = 5 }: IdeasPanelProps) {
                                 isExpanded={expandedIndex === idx}
                                 onToggle={() => setExpandedIndex(expandedIndex === idx ? null : idx)}
                                 onCiteClick={(trendTitle) => {
-                                    // Dispatch custom event for highlighting (decoupled for now)
                                     window.dispatchEvent(new CustomEvent('highlight-trend', { detail: trendTitle }));
+                                    // Close panel on mobile when citing
+                                    if (isMobile && onClose) onClose();
                                 }}
                             />
                         ))}
