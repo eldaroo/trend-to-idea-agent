@@ -33,9 +33,6 @@ Thumbs.db
 .git
 .gitignore
 
-# Convex generated (will be regenerated)
-convex/_generated
-
 # Testing
 coverage
 .nyc_output
