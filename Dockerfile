@@ -29,6 +29,9 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
+# Generate Convex types before building
+RUN npx convex codegen
+
 # Build the application
 RUN npm run build
 

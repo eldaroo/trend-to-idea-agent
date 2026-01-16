@@ -301,8 +301,13 @@ Return JSON format:
                     await cacheSearch(query, results);
                 }
 
-                // Process top 3 results per query
+                // Process top 3 results per query, excluding problematic domains
                 for (const result of results.slice(0, 3)) {
+                    // Skip theinformation.com as URLs are often incomplete
+                    if (result.url.includes('theinformation.com')) {
+                        continue;
+                    }
+
                     candidates.push({
                         title: result.title,
                         url: result.url,
