@@ -38,6 +38,14 @@ export async function POST(request: Request) {
             });
         };
 
+        const getCachedSearch = async (query: string) => {
+            return await convex.query(api.searchCache.getCachedSearch, { query });
+        };
+
+        const cacheSearch = async (query: string, results: any[]) => {
+            await convex.mutation(api.searchCache.cacheSearch, { query, results });
+        };
+
         // ========== STEP 1: Clarify Scope ==========
         console.log("[Orchestrator] Clarifying scope...");
         await updateStatus("planning");
@@ -238,8 +246,23 @@ Return JSON format:
             await emit("main", "log", { msg: `Searching: "${query}"` });
 
             try {
-                const results = await searchClient.searchTrends(query, run.constraints);
+                // Check cache first
+                const cachedResults = await getCachedSearch(query);
 
+                let results;
+                if (cachedResults && cachedResults.length > 0) {
+                    await emit("main", "log", { msg: `✓ Using cached results for: "${query}"` });
+                    results = cachedResults;
+                } else {
+                    // Cache miss - make API call
+                    await emit("main", "log", { msg: `⚡ Fetching fresh results for: "${query}"` });
+                    results = await searchClient.searchTrends(query, run.constraints);
+
+                    // Cache the results
+                    await cacheSearch(query, results);
+                }
+
+                // Process top 3 results per query
                 for (const result of results.slice(0, 3)) {
                     candidates.push({
                         title: result.title,

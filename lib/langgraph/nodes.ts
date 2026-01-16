@@ -8,6 +8,8 @@ import { SearchClient, getGeminiModel } from "../research/search";
 export interface ConvexEmitter {
     emit: (surface: "main" | "sidebar", type: string, payload: any) => Promise<void>;
     updateStatus: (status: string) => Promise<void>;
+    getCachedSearch: (query: string) => Promise<any[] | null>;
+    cacheSearch: (query: string, results: any[]) => Promise<void>;
 }
 
 /**
@@ -33,7 +35,7 @@ Constraints:
 - Exclude keywords: ${state.constraints.exclude?.join(", ") || "none"}
 
 Create a research plan with:
-1. 3-5 specific search queries to find trending topics
+1. 2-3 specific, diverse search queries to find trending topics (keep it minimal to conserve API quota)
 2. Strategy explanation
 
 Return JSON format:
@@ -79,7 +81,6 @@ export async function fetchTrends(
     await emitter.updateStatus("researching");
     await emitter.emit("main", "status", { step: "Researching trending topics" });
 
-    // Google Custom Search (100 free queries/day) or mock data fallback
     const searchClient = new SearchClient();
     const candidates: TrendCandidate[] = [];
 
@@ -89,9 +90,25 @@ export async function fetchTrends(
         for (const query of queries) {
             await emitter.emit("main", "log", { msg: `Searching: ${query}` });
 
-            const results = await searchClient.searchTrends(query, state.constraints);
+            // Check cache first
+            const cachedResults = await emitter.getCachedSearch(query);
 
-            for (const result of results.slice(0, 5)) {
+            let results;
+            if (cachedResults && cachedResults.length > 0) {
+                await emitter.emit("main", "log", { msg: `✓ Using cached results for: ${query}` });
+                results = cachedResults;
+            } else {
+                // Cache miss - make API call
+                await emitter.emit("main", "log", { msg: `⚡ Fetching fresh results for: ${query}` });
+                const searchResponse = await searchClient.searchTrends(query, state.constraints);
+                results = searchResponse;
+
+                // Cache the results
+                await emitter.cacheSearch(query, results);
+            }
+
+            // Process results (limit to top 3 per query to reduce processing)
+            for (const result of results.slice(0, 3)) {
                 const candidate: TrendCandidate = {
                     title: result.title,
                     url: result.url,

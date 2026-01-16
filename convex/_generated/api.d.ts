@@ -11,6 +11,7 @@
 import type * as events from "../events.js";
 import type * as orchestrator from "../orchestrator.js";
 import type * as runs from "../runs.js";
+import type * as searchCache from "../searchCache.js";
 
 import type {
   ApiFromModules,
@@ -22,6 +23,7 @@ declare const fullApi: ApiFromModules<{
   events: typeof events;
   orchestrator: typeof orchestrator;
   runs: typeof runs;
+  searchCache: typeof searchCache;
 }>;
 
 /**

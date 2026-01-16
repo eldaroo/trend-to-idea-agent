@@ -33,6 +33,9 @@ export default function Home() {
 
     setIsProcessing(true);
 
+    // Clear previous run to avoid showing stale data
+    setCurrentRunId(null);
+
     try {
       const runId = await createRun({
         userQuery: query,

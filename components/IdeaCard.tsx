@@ -44,11 +44,28 @@ function HighlightedText({ text }: { text: string }) {
 export function IdeaCard({ idea, isExpanded = false, onToggle, onCiteClick }: IdeaCardProps) {
     const accentColor = getPlatformColor(idea.platform);
 
-    // Extract title from first line or bold section for compact view
+    // Extract title from first meaningful line (skip metadata like "Image:", "Caption:", etc.)
     const title = useMemo(() => {
-        const firstLine = idea.idea.split('\n')[0];
-        const boldMatch = firstLine.match(/\*\*(.*?)\*\*/);
-        return boldMatch ? boldMatch[1] : firstLine.replace(/^[#-]\s*/, '').substring(0, 50) + '...';
+        const lines = idea.idea.split('\n').filter(line => line.trim());
+
+        // Skip metadata lines (Image:, Caption:, CTA:, Question:)
+        const contentLine = lines.find(line => {
+            const upper = line.trim().toUpperCase();
+            return !upper.startsWith('IMAGE:') &&
+                !upper.startsWith('CAPTION:') &&
+                !upper.startsWith('CTA:') &&
+                !upper.startsWith('QUESTION:');
+        });
+
+        if (!contentLine) return 'Content Idea';
+
+        // Try to extract bold text first
+        const boldMatch = contentLine.match(/\*\*(.*?)\*\*/);
+        if (boldMatch) return boldMatch[1];
+
+        // Otherwise use first 60 chars of the line
+        const cleaned = contentLine.replace(/^[#-]\s*/, '').trim();
+        return cleaned.length > 60 ? cleaned.substring(0, 60) + '...' : cleaned;
     }, [idea.idea]);
 
     return (

@@ -89,4 +89,19 @@ export default defineSchema({
     })
         .index("by_run_and_time", ["runId", "ts"])
         .index("by_run_and_surface", ["runId", "surface", "ts"]),
+
+    // Search Cache table: stores search results to reduce API calls
+    searchCache: defineTable({
+        query: v.string(),
+        normalizedQuery: v.string(),
+        results: v.array(v.object({
+            title: v.string(),
+            url: v.string(),
+            content: v.string(),
+            score: v.number(),
+            published_date: v.optional(v.string()),
+        })),
+        cachedAt: v.number(),
+    })
+        .index("by_query", ["normalizedQuery"]),
 });
