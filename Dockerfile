@@ -21,6 +21,10 @@ RUN npm ci --legacy-peer-deps
 FROM node:20-alpine AS builder
 WORKDIR /app
 
+# Build arguments for Convex
+ARG CONVEX_DEPLOYMENT=prod:neat-poodle-687
+ENV CONVEX_DEPLOYMENT=$CONVEX_DEPLOYMENT
+
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
