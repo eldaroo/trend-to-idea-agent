@@ -1,5 +1,4 @@
 services:
-  # Next.js Application
   app:
     build:
       context: .
@@ -8,44 +7,11 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_CONVEX_URL=${NEXT_PUBLIC_CONVEX_URL:-http://convex:3210}
-      - CONVEX_DEPLOYMENT=${CONVEX_DEPLOYMENT}
+      - NEXT_PUBLIC_CONVEX_URL=${NEXT_PUBLIC_CONVEX_URL:-https://neat-poodle-687.convex.cloud}
+      - CONVEX_DEPLOYMENT=${CONVEX_DEPLOYMENT:-prod:neat-poodle-687}
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.0-flash-exp}
       - GEMINI_TEMPERATURE=${GEMINI_TEMPERATURE:-0.2}
       - GOOGLE_SEARCH_API_KEY=${GOOGLE_SEARCH_API_KEY}
       - GOOGLE_SEARCH_ENGINE_ID=${GOOGLE_SEARCH_ENGINE_ID}
-    depends_on:
-      - convex
-    networks:
-      - app-network
     restart: unless-stopped
-
-  # Convex Backend (Development)
-  convex:
-    image: node:20-alpine
-    working_dir: /app
-    volumes:
-      - ./convex:/app/convex
-      - ./package.json:/app/package.json
-      - ./package-lock.json:/app/package-lock.json
-      - convex_data:/app/.convex
-    ports:
-      - "3210:3210"
-    environment:
-      - CONVEX_SELF_HOSTING=1
-    command: >
-      sh -c "
-        npm install convex &&
-        npx convex dev --once --configure=new
-      "
-    networks:
-      - app-network
-    restart: unless-stopped
-
-networks:
-  app-network:
-    driver: bridge
-
-volumes:
-  convex_data:

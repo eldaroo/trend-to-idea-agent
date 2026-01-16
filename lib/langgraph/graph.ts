@@ -1,4 +1,4 @@
-import { StateGraph, END } from "@langchain/langgraph";
+import { StateGraph, START, END } from "@langchain/langgraph";
 import { AgentState, AgentStateType } from "./state";
 import {
     planResearch,
@@ -25,7 +25,8 @@ import {
 
 export function createAgentGraph(emitter: ConvexEmitter) {
     // Create the graph
-    const workflow = new StateGraph(AgentState);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const workflow = new StateGraph(AgentState) as any;
 
     // Add nodes (wrap with emitter)
     workflow.addNode("planResearch", async (state: AgentStateType) =>
@@ -53,7 +54,7 @@ export function createAgentGraph(emitter: ConvexEmitter) {
     );
 
     // Define edges
-    workflow.addEdge("__start__", "planResearch");
+    workflow.addEdge(START, "planResearch");
     workflow.addEdge("planResearch", "fetchTrends");
     workflow.addEdge("fetchTrends", "synthesizeReport");
     workflow.addEdge("synthesizeReport", "awaitApproval");

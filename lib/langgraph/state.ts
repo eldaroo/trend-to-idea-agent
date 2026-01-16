@@ -70,35 +70,42 @@ export const AgentState = Annotation.Root({
 
   // Research planning
   plan: Annotation<ResearchPlan | null>({
+    value: (_, next) => next,
     default: () => null,
   }),
 
   // Research results
   candidates: Annotation<TrendCandidate[]>({
+    value: (_, next) => next,
     default: () => [],
   }),
 
   // Synthesized report
   report: Annotation<ResearchReport | null>({
+    value: (_, next) => next,
     default: () => null,
   }),
 
   // HITL approval state
   approval: Annotation<"approved" | "refine" | "restart" | null>({
+    value: (_, next) => next,
     default: () => null,
   }),
 
   refinement: Annotation<string | null>({
+    value: (_, next) => next,
     default: () => null,
   }),
 
   // Generated ideas
   ideas: Annotation<Idea[]>({
+    value: (_, next) => next,
     default: () => [],
   }),
 
   // Error tracking
   error: Annotation<string | null>({
+    value: (_, next) => next,
     default: () => null,
   }),
 });
