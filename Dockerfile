@@ -29,6 +29,10 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
+# Convex URL for build (NEXT_PUBLIC_ vars are inlined at build time)
+ARG NEXT_PUBLIC_CONVEX_URL=https://neat-poodle-687.convex.cloud
+ENV NEXT_PUBLIC_CONVEX_URL=$NEXT_PUBLIC_CONVEX_URL
+
 # Build the application
 RUN npm run build
 
